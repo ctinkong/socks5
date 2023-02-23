@@ -48,7 +48,7 @@ type Config struct {
 	// Optional function for dialing out
 	Dial func(ctx context.Context, network, addr string) (net.Conn, error)
 
-	// ÄÚ´æ·ÖÅäÆ÷
+	// å†…å­˜åˆ†é…å™¨
 	Mem MemMgr
 }
 
