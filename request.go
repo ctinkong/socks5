@@ -1,13 +1,12 @@
 package socks5
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
 	"strconv"
 	"strings"
-
-	"golang.org/x/net/context"
 )
 
 const (
@@ -245,10 +244,13 @@ func (s *Server) handleAssociate(ctx context.Context, conn conn, req *Request) e
 	}
 
 	// TODO: Support associate
-	if err := sendReply(conn, commandNotSupported, nil); err != nil {
-		return fmt.Errorf("Failed to send reply: %v", err)
-	}
-	return nil
+	// if err := sendReply(conn, commandNotSupported, nil); err != nil {
+	// 	return fmt.Errorf("Failed to send reply: %v", err)
+	// }
+	// return nil
+
+	// support by ctinkong
+	return doAssociate(ctx, s, conn, req)
 }
 
 // readAddrSpec is used to read AddrSpec.

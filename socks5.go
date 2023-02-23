@@ -2,12 +2,11 @@ package socks5
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"os"
-
-	"golang.org/x/net/context"
 )
 
 const (
@@ -48,6 +47,9 @@ type Config struct {
 
 	// Optional function for dialing out
 	Dial func(ctx context.Context, network, addr string) (net.Conn, error)
+
+	// ÄÚ´æ·ÖÅäÆ÷
+	Mem MemMgr
 }
 
 // Server is reponsible for accepting connections and handling
