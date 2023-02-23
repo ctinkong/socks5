@@ -183,7 +183,7 @@ func TestSOCKS5_Associate(t *testing.T) {
 				}
 				l, err := conn.Read(buf[:])
 				fmt.Printf("### response len %v: %v ###\n", l, string(buf[:l]))
-				time.Sleep(time.Second)
+				time.Sleep(time.Millisecond)
 			}
 			conn.Close()
 			s5.Close()
