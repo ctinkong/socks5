@@ -7,6 +7,11 @@ import (
 	"strconv"
 )
 
+// 测试使用
+type BindCallBackFun func(bindAddr string)
+
+var BindCallBack BindCallBackFun
+
 func doBind(ctx context.Context, s *Server, conn conn, req *Request) error {
 	// 随机绑定端口
 	listenTcp, err := net.Listen("tcp", "0.0.0.0:0")
@@ -17,6 +22,10 @@ func doBind(ctx context.Context, s *Server, conn conn, req *Request) error {
 	}
 	defer listenTcp.Close()
 	s.config.Logger.Printf("doBind Listen %v\n", listenTcp.Addr().String())
+	if BindCallBack != nil {
+		BindCallBack(listenTcp.Addr().String())
+	}
+
 	// 获取绑定端口
 	_, port, err := net.SplitHostPort(listenTcp.Addr().String())
 	if err != nil {
