@@ -7,4 +7,5 @@ Forked from https://github.com/armon/go-socks5
 ====
 
 在原始工程基础上新增:
+* 支持 BIND 命令
 * 支持 ASSOCIATE 命令

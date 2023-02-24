@@ -63,7 +63,6 @@ func doAssociate(ctx context.Context, s *Server, conn conn, req *Request) error 
 	// 1、如果 DST.ADDR 或者 DST.PORT 为零值，则；
 	// 2、如果 DST.ADDR 为局域网地址，则服务端新绑定端口与之对应；
 	// 3、如果 DST.ADDR 公网地址，且目标地址没有连接过，则复用服务器端口，否则务端新绑定端口与之对应；
-	bindPort := 0
 	udpServer := newUdpServer()
 	// 绑定随机端口
 	err := udpServer.Listen("udp", "0.0.0.0:0")
@@ -74,7 +73,7 @@ func doAssociate(ctx context.Context, s *Server, conn conn, req *Request) error 
 	if err != nil {
 		return fmt.Errorf("1 doAssociate Failed to SplitHostPort: %v", err)
 	}
-	bindPort, _ = strconv.Atoi(port)
+	bindPort, _ := strconv.Atoi(port)
 	defer udpServer.Close()
 
 	// 创建内存分配器
@@ -90,9 +89,9 @@ func doAssociate(ctx context.Context, s *Server, conn conn, req *Request) error 
 	}()
 
 	// Send success
-	bind := AddrSpec{IP: s.config.BindIP, Port: bindPort}
-	if err := sendReply(conn, successReply, &bind); err != nil {
-		return fmt.Errorf("1 Failed to send reply: %v", err)
+	bindAddr := AddrSpec{IP: s.config.BindIP, Port: bindPort}
+	if err := sendReply(conn, successReply, &bindAddr); err != nil {
+		return fmt.Errorf("doAssociate Failed to send reply: %v", err)
 	}
 	return readFromSrc(ctx, s, req, udpServer, memCreater)
 }

@@ -224,11 +224,15 @@ func (s *Server) handleBind(ctx context.Context, conn conn, req *Request) error 
 		ctx = ctx_
 	}
 
-	// TODO: Support bind
-	if err := sendReply(conn, commandNotSupported, nil); err != nil {
-		return fmt.Errorf("Failed to send reply: %v", err)
-	}
-	return nil
+	// // TODO: Support bind
+	// if err := sendReply(conn, commandNotSupported, nil); err != nil {
+	// 	return fmt.Errorf("Failed to send reply: %v", err)
+	// }
+	// return nil
+
+	// support by ctinkong
+	s.config.Logger.Printf("recv bind cmd\n")
+	return doBind(ctx, s, conn, req)
 }
 
 // handleAssociate is used to handle a connect command

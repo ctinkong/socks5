@@ -2,6 +2,7 @@ package socks5
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -9,15 +10,17 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
 	ssock "github.com/txthinking/socks5"
+	ssock2 "github.com/wzshiming/socks5"
 )
 
 func TestSOCKS5_Connect(t *testing.T) {
 	// Create a local listener
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := net.Listen("tcp", "127.0.0.1:12000")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -163,8 +166,14 @@ func TestSOCKS5_Associate(t *testing.T) {
 	}()
 	time.Sleep(10 * time.Millisecond)
 	n := 10
+
+	var wg = sync.WaitGroup{}
+
 	for ; n > 0; n-- {
+		wg.Add(1)
 		go func(i int) {
+			defer wg.Done()
+
 			s5, err := ssock.NewClient("127.0.0.1:12366", "foo", "bar", 0, 0)
 			if err != nil {
 				t.Fatalf("NewClient err: %v", err)
@@ -183,11 +192,103 @@ func TestSOCKS5_Associate(t *testing.T) {
 				}
 				l, err := conn.Read(buf[:])
 				fmt.Printf("### response len %v: %v ###\n", l, string(buf[:l]))
-				time.Sleep(time.Millisecond)
+				// time.Sleep(time.Millisecond)
+				break
 			}
 			conn.Close()
-			s5.Close()
 		}(n)
 	}
-	select {}
+	wg.Wait()
+}
+
+func TestSocks5_Bind(t *testing.T) {
+	// Create a socks server
+	creds := StaticCredentials{
+		"foo": "bar",
+	}
+	cator := UserPassAuthenticator{Credentials: creds}
+	conf := &Config{
+		AuthMethods: []Authenticator{cator},
+		BindIP:      net.ParseIP("127.0.0.1"),
+		Logger:      log.New(os.Stdout, "", log.LstdFlags),
+	}
+	serv, err := New(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+		return
+	}
+
+	// Start listening
+	go func() {
+		if err := serv.ListenAndServe("tcp", "127.0.0.1:12367"); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}()
+	time.Sleep(10 * time.Millisecond)
+
+	// bind client
+	dial, err := ssock2.NewDialer("socks5://127.0.0.1:12367")
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	dial.Username = "foo"
+	dial.Password = "bar"
+	listener, err := dial.Listen(context.Background(), "tcp", ":12000")
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	defer listener.Close()
+
+	var wg = sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		client, err := listener.Accept()
+		if err != nil {
+			t.Fatal(err)
+			return
+		}
+		defer client.Close()
+
+		fmt.Printf("bind recv one from %v\n", client.LocalAddr().String())
+
+		var bs [4096]byte
+		n, err := client.Read(bs[:])
+		if err == nil {
+			fmt.Printf("=================\nbind server recv:\n%v\n=================\n", string(bs[:n]))
+			client.Write([]byte("HTTP/1.1 200 OK\r\nServer: sock5\r\nContent-Length: 10\r\n\r\n1234567890"))
+		}
+	}()
+	fmt.Printf("############\n警告：FIXME 无法通过 客户端获取远端绑定的端口 只能遍历。遍历端口范围需要根据测试情况调整\n############\n")
+	//FIXME 无法通过 客户端获取远端绑定的端口 只能遍历。遍历端口范围需要根据测试情况调整
+	for port := 55000; port < 65536; port++ {
+		if port%100 == 0 {
+			fmt.Printf("now try port %v\n", port)
+		}
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%v", port), time.Millisecond*10)
+		if err != nil {
+			// fmt.Printf("net.Dial fail %v\n", err)
+			continue
+		}
+		defer conn.Close()
+		fmt.Printf("connect port %v success\n", port)
+
+		_, err = conn.Write([]byte("GET / HTTP/1.1\r\n\r\n"))
+		if err != nil {
+			fmt.Printf("write data fail %v\n", err)
+			break
+		}
+		var bs [4096]byte
+		n, err := conn.Read(bs[:])
+		if err != nil {
+			fmt.Printf("read data fail %v\n", err)
+			break
+		}
+		fmt.Printf("=================\nhttp rsp:\n%v\n=================\n", string(bs[:n]))
+		break
+	}
+	wg.Wait()
 }
